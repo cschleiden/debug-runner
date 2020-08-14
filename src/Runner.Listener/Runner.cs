@@ -193,7 +193,7 @@ namespace GitHub.Runner.Listener
                     HostContext.StartupType = startType;
 
                     // Run the runner interactively or as service
-                    return await RunAsync(settings, command.RunOnce);
+                    return await RunAsync(settings, command.RunOnce || settings.Ephemeral);  // TODO: Remove RunOnce later.
                 }
                 else
                 {
@@ -469,7 +469,8 @@ Config Options:
  --runnergroup string   Name of the runner group to add this runner to (defaults to the default runner group)
  --labels string        Extra labels in addition to the default: 'self-hosted,{Constants.Runner.Platform},{Constants.Runner.PlatformArchitecture}'
  --work string          Relative runner work directory (default {Constants.Path.WorkDirectory})
- --replace              Replace any existing runner with the same name (default false)");
+ --replace              Replace any existing runner with the same name (default false)
+ --ephemeral            Configure the runner only take one job and let service un-configured the runner after the job finish (default false)");
 #if OS_WINDOWS
     _term.WriteLine($@" --runasservice   Run the runner as a service");
     _term.WriteLine($@" --windowslogonaccount string   Account to run the service as. Requires runasservice");
