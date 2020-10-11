@@ -31,6 +31,7 @@ namespace GitHub.Runner.Common
         Task Delay(TimeSpan delay, CancellationToken cancellationToken);
         T CreateService<T>() where T : class, IRunnerService;
         T GetService<T>() where T : class, IRunnerService;
+        void SetServiceType<TInterface, TImplementation>() where TInterface : class, IRunnerService;
         void SetDefaultCulture(string name);
         event EventHandler Unloading;
         void ShutdownRunner(ShutdownReason reason);
@@ -414,6 +415,11 @@ namespace GitHub.Runner.Common
 
             // Return the instance from the cache.
             return _serviceInstances[typeof(T)] as T;
+        }
+
+        public void SetServiceType<TInterface, TImplementation>() where TInterface : class, IRunnerService
+        {
+            this._serviceTypes.TryAdd(typeof(TInterface), typeof(TImplementation));
         }
 
         public void SetDefaultCulture(string name)

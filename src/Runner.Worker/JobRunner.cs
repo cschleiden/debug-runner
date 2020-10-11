@@ -49,7 +49,7 @@ namespace GitHub.Runner.Worker
             // jobServerQueue is the throttling reporter.
             _jobServerQueue = HostContext.GetService<IJobServerQueue>();
             VssConnection jobConnection = VssUtil.CreateConnection(jobServerUrl, jobServerCredential, new DelegatingHandler[] { new ThrottlingReportHandler(_jobServerQueue) });
-            await jobServer.ConnectAsync(jobConnection);
+            // await jobServer.ConnectAsync(jobConnection);
 
             _jobServerQueue.Start(message);
             HostContext.WritePerfCounter($"WorkerJobServerQueueStarted_{message.RequestId.ToString()}");
@@ -96,7 +96,7 @@ namespace GitHub.Runner.Worker
                 {
                     Trace.Error(ex);
                     jobContext.Error(ex);
-                    return await CompleteJobAsync(jobServer, jobContext, message, TaskResult.Failed);
+                    // return await CompleteJobAsync(jobServer, jobContext, message, TaskResult.Failed);
                 }
 
                 if (jobContext.WriteDebug)
@@ -129,7 +129,7 @@ namespace GitHub.Runner.Worker
                     // don't log error issue to job ExecutionContext, since server owns the job level issue
                     Trace.Error($"Job is canceled during initialize.");
                     Trace.Error($"Caught exception: {ex}");
-                    return await CompleteJobAsync(jobServer, jobContext, message, TaskResult.Canceled);
+                    // return await CompleteJobAsync(jobServer, jobContext, message, TaskResult.Canceled);
                 }
                 catch (Exception ex)
                 {
@@ -137,7 +137,7 @@ namespace GitHub.Runner.Worker
                     // don't log error issue to job ExecutionContext, since server owns the job level issue
                     Trace.Error($"Job initialize failed.");
                     Trace.Error($"Caught exception from {nameof(jobExtension.InitializeJob)}: {ex}");
-                    return await CompleteJobAsync(jobServer, jobContext, message, TaskResult.Failed);
+                    // return await CompleteJobAsync(jobServer, jobContext, message, TaskResult.Failed);
                 }
 
                 // trace out all steps

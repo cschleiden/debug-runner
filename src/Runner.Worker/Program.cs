@@ -32,19 +32,27 @@ namespace GitHub.Runner.Worker
                 trace.Info($"UI Culture: {CultureInfo.CurrentUICulture.Name}");
                 context.WritePerfCounter("WorkerProcessStarted");
 
-                // Validate args.
-                ArgUtil.NotNull(args, nameof(args));
-                ArgUtil.Equal(3, args.Length, nameof(args.Length));
-                ArgUtil.NotNullOrEmpty(args[0], $"{nameof(args)}[0]");
-                ArgUtil.Equal("spawnclient", args[0].ToLowerInvariant(), $"{nameof(args)}[0]");
-                ArgUtil.NotNullOrEmpty(args[1], $"{nameof(args)}[1]");
-                ArgUtil.NotNullOrEmpty(args[2], $"{nameof(args)}[2]");
-                var worker = context.GetService<IWorker>();
-
                 // Run the worker.
-                return await worker.RunAsync(
-                    pipeIn: args[1],
-                    pipeOut: args[2]);
+                if (args[0] == "local")
+                {
+                    var worker = context.GetService<IWorker>();
+                    return await worker.RunAsyncLocal(args[1], false);
+                }
+                else
+                {
+                    // Validate args.
+                    ArgUtil.NotNull(args, nameof(args));
+                    ArgUtil.Equal(3, args.Length, nameof(args.Length));
+                    ArgUtil.NotNullOrEmpty(args[0], $"{nameof(args)}[0]");
+                    ArgUtil.Equal("spawnclient", args[0].ToLowerInvariant(), $"{nameof(args)}[0]");
+                    ArgUtil.NotNullOrEmpty(args[1], $"{nameof(args)}[1]");
+                    ArgUtil.NotNullOrEmpty(args[2], $"{nameof(args)}[2]");
+                    
+                    var worker = context.GetService<IWorker>();
+                    return await worker.RunAsync(
+                        pipeIn: args[1],
+                        pipeOut: args[2]);   
+                }
             }
             catch (Exception ex)
             {

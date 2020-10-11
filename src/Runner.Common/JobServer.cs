@@ -25,6 +25,72 @@ namespace GitHub.Runner.Common
         Task<ActionDownloadInfoCollection> ResolveActionDownloadInfoAsync(Guid scopeIdentifier, string hubName, Guid planId, ActionReferenceList actions, CancellationToken cancellationToken);
     }
 
+    public class LocalJobServer : IJobServer
+    {
+        public void Initialize(IHostContext context)
+        {
+        }
+
+        public Task ConnectAsync(VssConnection jobConnection)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task<TaskLog> AppendLogContentAsync(Guid scopeIdentifier, string hubName, Guid planId, int logId, Stream uploadStream,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new TaskLog("some-path"));
+        }
+
+        public Task AppendTimelineRecordFeedAsync(Guid scopeIdentifier, string hubName, Guid planId, Guid timelineId,
+            Guid timelineRecordId, Guid stepId, IList<string> lines, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task<TaskAttachment> CreateAttachmentAsync(Guid scopeIdentifier, string hubName, Guid planId, Guid timelineId, Guid timelineRecordId,
+            string type, string name, Stream uploadStream, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new TaskAttachment("type", "name"));
+        }
+
+        public Task<TaskLog> CreateLogAsync(Guid scopeIdentifier, string hubName, Guid planId, TaskLog log,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new TaskLog("some-path"));
+        }
+
+        public Task<Timeline> CreateTimelineAsync(Guid scopeIdentifier, string hubName, Guid planId, Guid timelineId,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new Timeline());
+        }
+
+        public Task<List<TimelineRecord>> UpdateTimelineRecordsAsync(Guid scopeIdentifier, string hubName, Guid planId, Guid timelineId, IEnumerable<TimelineRecord> records,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new List<TimelineRecord>());
+        }
+
+        public Task RaisePlanEventAsync<T>(Guid scopeIdentifier, string hubName, Guid planId, T eventData,
+            CancellationToken cancellationToken) where T : JobEvent
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task<Timeline> GetTimelineAsync(Guid scopeIdentifier, string hubName, Guid planId, Guid timelineId,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new Timeline());
+        }
+
+        public Task<ActionDownloadInfoCollection> ResolveActionDownloadInfoAsync(Guid scopeIdentifier, string hubName, Guid planId, ActionReferenceList actions,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new ActionDownloadInfoCollection());
+        }
+    }
+
     public sealed class JobServer : RunnerService, IJobServer
     {
         private bool _hasConnection;

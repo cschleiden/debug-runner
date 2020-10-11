@@ -27,7 +27,6 @@ namespace GitHub.Runner.Common
             {
                 _traceSource.Listeners.RemoveAt(0);
             }
-
             _traceSource.Listeners.Add(traceListener);
         }
 

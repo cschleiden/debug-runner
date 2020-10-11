@@ -60,6 +60,9 @@ namespace GitHub.Runner.Common
 
         public void StartClient(string pipeNameInput, string pipeNameOutput)
         {
+            System.Console.WriteLine(pipeNameInput);
+            System.Console.WriteLine(pipeNameOutput);
+
             _inClient = new AnonymousPipeClientStream(PipeDirection.In, pipeNameInput);
             _outClient = new AnonymousPipeClientStream(PipeDirection.Out, pipeNameOutput);
             _readStream = new StreamString(_inClient);
@@ -70,6 +73,9 @@ namespace GitHub.Runner.Common
         {
             await _writeStream.WriteInt32Async((int)messageType, cancellationToken);
             await _writeStream.WriteStringAsync(body, cancellationToken);
+
+            System.Console.WriteLine(messageType);
+            System.Console.WriteLine(body);
         }
 
         public async Task<WorkerMessage> ReceiveAsync(CancellationToken cancellationToken)
@@ -77,6 +83,10 @@ namespace GitHub.Runner.Common
             WorkerMessage result = new WorkerMessage(MessageType.NotInitialized, string.Empty);
             result.MessageType = (MessageType)await _readStream.ReadInt32Async(cancellationToken);
             result.Body = await _readStream.ReadStringAsync(cancellationToken);
+
+            System.Console.WriteLine(result.MessageType);
+            System.Console.WriteLine(result.Body);
+
             return result;
         }
 

@@ -23,6 +23,43 @@ namespace GitHub.Runner.Common
         void QueueTimelineRecordUpdate(Guid timelineId, TimelineRecord timelineRecord);
     }
 
+    public sealed class LocalJobServerQueue : IJobServerQueue
+    {
+        public void Initialize(IHostContext context)
+        {
+        }
+
+        public void ReportThrottling(TimeSpan delay, DateTime expiration)
+        {
+        }
+
+        public event EventHandler<ThrottlingEventArgs> JobServerQueueThrottling {
+            add { }
+            remove { }
+        }
+        
+        public Task ShutdownAsync()
+        {
+            return Task.CompletedTask;
+        }
+
+        public void Start(Pipelines.AgentJobRequestMessage jobRequest)
+        {
+        }
+
+        public void QueueWebConsoleLine(Guid stepRecordId, string line)
+        {
+        }
+
+        public void QueueFileUpload(Guid timelineId, Guid timelineRecordId, string type, string name, string path, bool deleteSource)
+        {
+        }
+
+        public void QueueTimelineRecordUpdate(Guid timelineId, TimelineRecord timelineRecord)
+        {
+        }
+    }
+
     public sealed class JobServerQueue : RunnerService, IJobServerQueue
     {
         // Default delay for Dequeue process
@@ -68,7 +105,7 @@ namespace GitHub.Runner.Common
 
         // Web console dequeue will start with process queue every 250ms for the first 60*4 times (~60 seconds).
         // Then the dequeue will happen every 500ms.
-        // In this way, customer still can get instance live console output on job start, 
+        // In this way, customer still can get instance live console output on job start,
         // at the same time we can cut the load to server after the build run for more than 60s
         private int _webConsoleLineAggressiveDequeueCount = 0;
         private const int _webConsoleLineAggressiveDequeueLimit = 4 * 60;
@@ -190,6 +227,7 @@ namespace GitHub.Runner.Common
             _timelineUpdateQueue.TryAdd(timelineId, new ConcurrentQueue<TimelineRecord>());
 
             Trace.Verbose("Enqueue timeline {0} update queue: {1}", timelineId, timelineRecord.Id);
+            Trace.Verbose("TL Record Update: " + System.Text.Json.JsonSerializer.Serialize(timelineRecord));
             _timelineUpdateQueue[timelineId].Enqueue(timelineRecord.Clone());
         }
 
@@ -464,8 +502,8 @@ namespace GitHub.Runner.Common
 
                 if (runOnce)
                 {
-                    // continue process timeline records update, 
-                    // we might have more records need update, 
+                    // continue process timeline records update,
+                    // we might have more records need update,
                     // since we just create a new sub-timeline
                     if (pendingSubtimelineUpdate)
                     {

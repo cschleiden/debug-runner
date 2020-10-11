@@ -16,6 +16,8 @@ namespace GitHub.Runner.Worker
     public interface IWorker : IRunnerService
     {
         Task<int> RunAsync(string pipeIn, string pipeOut);
+
+        Task<int> RunAsyncLocal(string jobMessage, bool debug);
     }
 
     public sealed class Worker : RunnerService, IWorker
@@ -41,7 +43,6 @@ namespace GitHub.Runner.Worker
                 ArgUtil.NotNullOrEmpty(pipeIn, nameof(pipeIn));
                 ArgUtil.NotNullOrEmpty(pipeOut, nameof(pipeOut));
                 VssUtil.InitializeVssClientSettings(HostContext.UserAgents, HostContext.WebProxy);
-                var jobRunner = HostContext.CreateService<IJobRunner>();
 
                 using (var channel = HostContext.CreateService<IProcessChannel>())
                 using (var jobRequestCancellationToken = CancellationTokenSource.CreateLinkedTokenSource(HostContext.RunnerShutdownToken))
@@ -63,17 +64,8 @@ namespace GitHub.Runner.Worker
                     Trace.Info("Message received.");
                     ArgUtil.Equal(MessageType.NewJobRequest, channelMessage.MessageType, nameof(channelMessage.MessageType));
                     ArgUtil.NotNullOrEmpty(channelMessage.Body, nameof(channelMessage.Body));
-                    var jobMessage = StringUtil.ConvertFromJson<Pipelines.AgentJobRequestMessage>(channelMessage.Body);
-                    ArgUtil.NotNull(jobMessage, nameof(jobMessage));
-                    HostContext.WritePerfCounter($"WorkerJobMessageReceived_{jobMessage.RequestId.ToString()}");
-
-                    // Initialize the secret masker and set the thread culture.
-                    InitializeSecretMasker(jobMessage);
-                    SetCulture(jobMessage);
-
-                    // Start the job.
-                    Trace.Info($"Job message:{Environment.NewLine} {StringUtil.ConvertToJson(jobMessage)}");
-                    Task<TaskResult> jobRunnerTask = jobRunner.RunAsync(jobMessage, jobRequestCancellationToken.Token);
+                    
+                    var jobRunnerTask = this.StartJob(channelMessage.Body, jobRequestCancellationToken.Token);
 
                     // Start listening for a cancel message from the channel.
                     Trace.Info("Listening for cancel message from the channel.");
@@ -117,6 +109,34 @@ namespace GitHub.Runner.Worker
                 HostContext.Unloading -= Worker_Unloading;
                 _completedCommand.Set();
             }
+        }
+
+        public async Task<int> RunAsyncLocal(string jobMessage, bool debug)
+        {
+            // Prevent any communication
+            HostContext.SetServiceType<IJobServerQueue, LocalJobServerQueue>();
+            HostContext.SetServiceType<IJobServer, LocalJobServer>();
+            
+            var result = await this.StartJob(jobMessage, new CancellationTokenSource().Token);
+
+            return 0;
+        }
+
+        private Task<TaskResult> StartJob(string jobMessageS, CancellationToken cancellationToken)
+        {
+            var jobRunner = HostContext.CreateService<IJobRunner>();
+            var jobMessage = StringUtil.ConvertFromJson<Pipelines.AgentJobRequestMessage>(jobMessageS);
+            ArgUtil.NotNull(jobMessage, nameof(jobMessage));
+            HostContext.WritePerfCounter($"WorkerJobMessageReceived_{jobMessage.RequestId.ToString()}");
+
+            // Initialize the secret masker and set the thread culture.
+            InitializeSecretMasker(jobMessage);
+            SetCulture(jobMessage);
+
+            // Start the job.
+            Trace.Info($"Job message:{Environment.NewLine} {StringUtil.ConvertToJson(jobMessage)}");
+            Task<TaskResult> jobRunnerTask = jobRunner.RunAsync(jobMessage, cancellationToken);
+            return jobRunnerTask;
         }
 
         private void InitializeSecretMasker(Pipelines.AgentJobRequestMessage message)
