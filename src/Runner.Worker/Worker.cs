@@ -116,6 +116,7 @@ namespace GitHub.Runner.Worker
             // Prevent any communication
             HostContext.SetServiceType<IJobServerQueue, LocalJobServerQueue>();
             HostContext.SetServiceType<IJobServer, LocalJobServer>();
+            HostContext.SetServiceType<IPagingLogger, StdOutLogger>();
             
             var result = await this.StartJob(jobMessage, new CancellationTokenSource().Token);
 

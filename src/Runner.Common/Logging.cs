@@ -15,6 +15,41 @@ namespace GitHub.Runner.Common
         void End();
     }
 
+    public class StdOutLogger : IPagingLogger
+    {
+        public void Initialize(IHostContext context)
+        {
+        }
+
+        public long TotalLines { get; private set; }
+        
+        public void Setup(Guid timelineId, Guid timelineRecordId)
+        {
+        }
+
+        public void Write(string message)
+        {
+            string line = $"{DateTime.UtcNow.ToString("O")} {message}";
+            Console.WriteLine(line);
+
+            this.TotalLines++;
+            if (line.IndexOf('\n') != -1)
+            {
+                foreach (char c in line)
+                {
+                    if (c == '\n')
+                    {
+                        this.TotalLines++;
+                    }
+                }
+            }
+        }
+
+        public void End()
+        {
+        }
+    }
+
     public class PagingLogger : RunnerService, IPagingLogger
     {
         public static string PagingFolder = "pages";
