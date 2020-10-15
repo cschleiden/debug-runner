@@ -35,8 +35,25 @@ namespace GitHub.Runner.Worker
                 // Run the worker.
                 if (args[0] == "local")
                 {
+                    bool debug = false;
+                    bool stopOnEnter = false;
+
+                    int messageArgIdx = 1;
+                    
+                    if (args.Length > 1 && args[1] == "--debug")
+                    {
+                        debug = true;
+                        messageArgIdx++;
+                    }
+                    
+                    if (args.Length > 2 && args[2] == "--stop-on-entry")
+                    {
+                        stopOnEnter = true;
+                        messageArgIdx++;
+                    }
+                    
                     var worker = context.GetService<IWorker>();
-                    return await worker.RunAsyncLocal(args[1], false);
+                    return await worker.RunAsyncLocal(args[messageArgIdx], debug, stopOnEnter);
                 }
                 else
                 {

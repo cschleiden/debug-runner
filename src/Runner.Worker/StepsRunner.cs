@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using GitHub.DistributedTask.Expressions2;
+using GitHub.DistributedTask.Expressions2.Sdk;
 using GitHub.DistributedTask.ObjectTemplating.Tokens;
 using GitHub.DistributedTask.Pipelines;
 using GitHub.DistributedTask.Pipelines.ContextData;
@@ -42,6 +44,8 @@ namespace GitHub.Runner.Worker
             ArgUtil.NotNull(jobContext, nameof(jobContext));
             ArgUtil.NotNull(jobContext.JobSteps, nameof(jobContext.JobSteps));
 
+            int stepIndex = -1;
+
             // TaskResult:
             //  Abandoned (Server set this.)
             //  Canceled
@@ -50,7 +54,6 @@ namespace GitHub.Runner.Worker
             //  Succeeded
             CancellationTokenRegistration? jobCancelRegister = null;
             jobContext.JobContext.Status = (jobContext.Result ?? TaskResult.Succeeded).ToActionResult();
-            var scopeInputs = new Dictionary<string, PipelineContextData>(StringComparer.OrdinalIgnoreCase);
             bool checkPostJobActions = false;
             while (jobContext.JobSteps.Count > 0 || !checkPostJobActions)
             {
@@ -64,6 +67,8 @@ namespace GitHub.Runner.Worker
 
                     continue;
                 }
+
+                stepIndex++;
 
                 var step = jobContext.JobSteps[0];
                 jobContext.JobSteps.RemoveAt(0);
@@ -138,6 +143,33 @@ namespace GitHub.Runner.Worker
                         step.ExecutionContext.Error(ex);
                         CompleteStep(step, TaskResult.Failed);
                     }
+                }
+                
+                var debugHandler = this.HostContext.GetService<IDebugHandler>();
+                if (debugHandler != null)
+                {
+                    //var testToken = new StringToken(null, null, null, value: "${{ github.repository }}");
+                    // var parser = new ExpressionParser();
+                    // var namedValues = new INamedValueInfo[]
+                    // {
+                    //     new NamedValueInfo<NoOperationNamedValue>(PipelineTemplateConstants.Strategy),
+                    //     new NamedValueInfo<NoOperationNamedValue>(PipelineTemplateConstants.Matrix),
+                    //     new NamedValueInfo<NoOperationNamedValue>(PipelineTemplateConstants.Steps),
+                    //     new NamedValueInfo<NoOperationNamedValue>(PipelineTemplateConstants.GitHub),
+                    //     new NamedValueInfo<NoOperationNamedValue>(PipelineTemplateConstants.Job),
+                    //     new NamedValueInfo<NoOperationNamedValue>(PipelineTemplateConstants.Runner),
+                    //     new NamedValueInfo<NoOperationNamedValue>(PipelineTemplateConstants.Env),
+                    //     new NamedValueInfo<NoOperationNamedValue>(PipelineTemplateConstants.Needs),
+                    // };
+                    // var tree = parser.CreateTree("github.repository", null, namedValues, step.ExecutionContext.ExpressionFunctions);
+                    // var result = tree.Evaluate(null, null, step.ExecutionContext.ToExpressionState().Context, null);
+                    
+                    //var templateEvaluator = step.ExecutionContext.ToPipelineTemplateEvaluator();
+                    //var condition = new BasicExpressionToken(null, null, null, "github.repository");
+                    //var result = templateEvaluator.EvaluateStepDisplayName(condition, step.ExecutionContext.ExpressionValues, step.ExecutionContext.ExpressionFunctions);
+
+                    // TODO: CS: Pass more state here so that we can evaluate context?
+                    await debugHandler.BeforeStep(stepIndex, jobContext, step);
                 }
 
                 if (!evaluateStepEnvFailed)

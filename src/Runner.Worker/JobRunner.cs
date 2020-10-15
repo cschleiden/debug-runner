@@ -130,6 +130,7 @@ namespace GitHub.Runner.Worker
                     Trace.Error($"Job is canceled during initialize.");
                     Trace.Error($"Caught exception: {ex}");
                     // return await CompleteJobAsync(jobServer, jobContext, message, TaskResult.Canceled);
+                    Console.WriteLine(ex);
                 }
                 catch (Exception ex)
                 {
@@ -138,6 +139,7 @@ namespace GitHub.Runner.Worker
                     Trace.Error($"Job initialize failed.");
                     Trace.Error($"Caught exception from {nameof(jobExtension.InitializeJob)}: {ex}");
                     // return await CompleteJobAsync(jobServer, jobContext, message, TaskResult.Failed);
+                    Console.WriteLine(ex);
                 }
 
                 // trace out all steps

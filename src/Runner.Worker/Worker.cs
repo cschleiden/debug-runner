@@ -4,6 +4,7 @@ using GitHub.Runner.Common.Util;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using GitHub.Services.WebApi;
@@ -17,7 +18,7 @@ namespace GitHub.Runner.Worker
     {
         Task<int> RunAsync(string pipeIn, string pipeOut);
 
-        Task<int> RunAsyncLocal(string jobMessage, bool debug);
+        Task<int> RunAsyncLocal(string jobMessage, bool debug, bool stopOnEnter);
     }
 
     public sealed class Worker : RunnerService, IWorker
@@ -111,14 +112,36 @@ namespace GitHub.Runner.Worker
             }
         }
 
-        public async Task<int> RunAsyncLocal(string jobMessage, bool debug)
+        public async Task<int> RunAsyncLocal(string jobMessage, bool debug, bool stopOnEnter)
         {
             // Prevent any communication
             HostContext.SetServiceType<IJobServerQueue, LocalJobServerQueue>();
             HostContext.SetServiceType<IJobServer, LocalJobServer>();
-            HostContext.SetServiceType<IPagingLogger, StdOutLogger>();
+
+            DebugHandler debugHandler = null;
             
+            if (debug)
+            {
+                HostContext.SetServiceType<IDebugHandler, DebugHandler>();
+                debugHandler = HostContext.GetService<IDebugHandler>() as DebugHandler;
+                
+                HostContext.SetServiceType<IPagingLogger, DebugLogger>();
+                
+                // Run and wait for connection
+                await debugHandler.Run();
+            }
+            else
+            {
+                // Log directly to stdout
+                HostContext.SetServiceType<IPagingLogger, StdOutLogger>();
+            }
+
             var result = await this.StartJob(jobMessage, new CancellationTokenSource().Token);
+
+            if (debugHandler != null)
+            {
+                await debugHandler.Stop();
+            }
 
             return 0;
         }

@@ -756,13 +756,16 @@ namespace GitHub.Runner.Worker
             }
 
             // write to job level execution context's log file.
-            if (_parentExecutionContext != null)
-            {
-                lock (_parentExecutionContext._loggerLock)
-                {
-                    _parentExecutionContext._logger.Write(msg);
-                }
-            }
+            // TODO: CS: Since we override the paging logger, this will double output all lines to the debugger,
+            // this might just need a separate service, something like IDebugLogger? Or take over the web streaming
+            // log job? 
+            // if (_parentExecutionContext != null)
+            // {
+            //     lock (_parentExecutionContext._loggerLock)
+            //     {
+            //         _parentExecutionContext._logger.Write(msg);
+            //     }
+            // }
 
             _jobServerQueue.QueueWebConsoleLine(_record.Id, msg);
             return totalLines;
