@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Sockets;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using GitHub.DistributedTask.Expressions2;
+using GitHub.DistributedTask.Expressions2.Sdk;
 using GitHub.DistributedTask.ObjectTemplating.Tokens;
 using GitHub.DistributedTask.Pipelines;
 using GitHub.DistributedTask.Pipelines.ContextData;
@@ -14,6 +16,7 @@ using GitHub.Runner.Common;
 using GitHub.Runner.Common.Util;
 using GitHub.Runner.Sdk;
 using GitHub.Runner.Worker.Expressions;
+using Runner.Worker.Debugger;
 using ObjectTemplating = GitHub.DistributedTask.ObjectTemplating;
 using Pipelines = GitHub.DistributedTask.Pipelines;
 
@@ -43,6 +46,8 @@ namespace GitHub.Runner.Worker
             ArgUtil.NotNull(jobContext, nameof(jobContext));
             ArgUtil.NotNull(jobContext.JobSteps, nameof(jobContext.JobSteps));
 
+            int stepIndex = -1;
+
             // TaskResult:
             //  Abandoned (Server set this.)
             //  Canceled
@@ -51,7 +56,6 @@ namespace GitHub.Runner.Worker
             //  Succeeded
             CancellationTokenRegistration? jobCancelRegister = null;
             jobContext.JobContext.Status = (jobContext.Result ?? TaskResult.Succeeded).ToActionResult();
-            var scopeInputs = new Dictionary<string, PipelineContextData>(StringComparer.OrdinalIgnoreCase);
             bool checkPostJobActions = false;
             while (jobContext.JobSteps.Count > 0 || !checkPostJobActions)
             {
@@ -65,6 +69,8 @@ namespace GitHub.Runner.Worker
 
                     continue;
                 }
+
+                stepIndex++;
 
                 var step = jobContext.JobSteps.Dequeue();
 
@@ -124,6 +130,10 @@ namespace GitHub.Runner.Worker
                         CompleteStep(step, TaskResult.Failed);
                     }
                 }
+
+                var debugHandler = this.HostContext.GetService<IDebugHandler>();
+                // TODO: CS: Pass more state here so that we can evaluate context?
+                await debugHandler?.BeforeStep(stepIndex, jobContext, step);
 
                 if (!evaluateStepEnvFailed)
                 {

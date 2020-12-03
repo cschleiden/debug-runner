@@ -235,6 +235,7 @@ namespace GitHub.Runner.Common
                 public static readonly string RequireJobContainer = "ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER";
                 public static readonly string RunnerDebug = "ACTIONS_RUNNER_DEBUG";
                 public static readonly string StepDebug = "ACTIONS_STEP_DEBUG";
+                public static readonly string WorkflowDebug = "ACTIONS_WORKFLOW_DEBUG";
                 public static readonly string AllowActionsUseUnsecureNodeVersion = "ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION";
             }
 

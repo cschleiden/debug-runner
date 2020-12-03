@@ -15,6 +15,7 @@ using GitHub.DistributedTask.WebApi;
 using GitHub.Runner.Common;
 using GitHub.Runner.Common.Util;
 using GitHub.Runner.Sdk;
+using Runner.Worker.Debugger;
 using Pipelines = GitHub.DistributedTask.Pipelines;
 
 namespace GitHub.Runner.Worker
@@ -416,6 +417,23 @@ namespace GitHub.Runner.Worker
                     if (StringUtil.ConvertToBoolean(enableWarning, defaultValue: true))
                     {
                         _diskSpaceCheckTask = CheckDiskSpaceAsync(context, _diskSpaceCheckToken.Token);
+                    }
+
+                    if (!string.IsNullOrEmpty(context.Variables.Get(Constants.Variables.Actions.WorkflowDebug)))
+                    {
+                        context.Output("Starting debugger, waiting for connection");
+
+                        var timeoutInSeconds = 120;
+
+                        var debugServer = this.HostContext.GetService<IDebugServer>();
+                        if (await debugServer.WaitForConnection(context, timeoutInSeconds))
+                        {
+                            context.Output("Debugger connected");
+                        }
+                        else
+                        {
+                            context.Output($"No debugger connection within {timeoutInSeconds}s");
+                        }
                     }
 
                     return steps;

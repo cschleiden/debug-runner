@@ -129,6 +129,11 @@ namespace GitHub.Runner.Common.Tests
             return s;
         }
 
+        public void SetServiceType<TInterface, TImplementation>() where TInterface : class, IRunnerService
+        {
+            throw new NotImplementedException();
+        }
+
         public void EnqueueInstance<T>(T instance) where T : class, IRunnerService
         {
             // Enqueue a service instance to be returned by CreateService.
