@@ -26,7 +26,8 @@ namespace GitHub.Runner.Worker
         // Do not mask the values of these secrets
         private static HashSet<String> SecretVariableMaskWhitelist = new HashSet<String>(StringComparer.OrdinalIgnoreCase){ 
             Constants.Variables.Actions.StepDebug,
-            Constants.Variables.Actions.RunnerDebug
+            Constants.Variables.Actions.RunnerDebug,
+            Constants.Variables.Actions.WorkflowDebug,
             };
 
         public async Task<int> RunAsync(string pipeIn, string pipeOut)

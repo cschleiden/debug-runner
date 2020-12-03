@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.Shared.VsCodeDebugProtocol" Version="16.7.40526.2" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="4.4.0" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="4.4.0" />
     <PackageReference Include="System.Threading.Channels" Version="4.4.0" />

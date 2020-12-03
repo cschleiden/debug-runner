@@ -214,6 +214,7 @@ namespace GitHub.Runner.Common
                 public static readonly string AllowUnsupportedCommands = "ACTIONS_ALLOW_UNSECURE_COMMANDS";
                 public static readonly string RunnerDebug = "ACTIONS_RUNNER_DEBUG";
                 public static readonly string StepDebug = "ACTIONS_STEP_DEBUG";
+                public static readonly string WorkflowDebug = "ACTIONS_WORKFLOW_DEBUG";
             }
 
             public static class Agent
