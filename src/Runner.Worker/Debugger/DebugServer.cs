@@ -25,11 +25,8 @@ namespace Runner.Worker.Debugger
     public async Task<bool> WaitForConnection(IExecutionContext context, object _)
     {
       // TODO: Use external address here? 
-      var localAddr = IPAddress.Parse("127.0.0.1");
-      var port = 41085;
-      var server = new TcpListener(localAddr, port);
-      
-      context.Output($"Waiting for connection at {localAddr.ToString()}:{port}");
+      var localAddr = IPAddress.Parse(Address);
+      var server = new TcpListener(localAddr, Port);
 
       var connected = false;
       
