@@ -260,6 +260,18 @@ namespace GitHub.Runner.Worker
                                                                           data: (object)containers));
                     }
 
+                    // Add optional debugger pre-step
+                    if (!string.IsNullOrEmpty(context.Variables.Get(Constants.Variables.Actions.WorkflowDebug)))
+                    {
+                        var debugServer = this.HostContext.GetService<IDebugServer>();
+
+                        preJobSteps.Add(new JobExtensionRunner(runAsync: debugServer.WaitForConnection,
+                            condition: $"{PipelineTemplateConstants.Success}()",
+                            displayName: await debugServer.GetTaskDisplayName(),
+                            data: null
+                        ));
+                    }
+
                     // Add action steps
                     foreach (var step in message.Steps)
                     {
@@ -353,23 +365,6 @@ namespace GitHub.Runner.Worker
                     if (StringUtil.ConvertToBoolean(enableWarning, defaultValue: true))
                     {
                         _diskSpaceCheckTask = CheckDiskSpaceAsync(context, _diskSpaceCheckToken.Token);
-                    }
-
-                    if (!string.IsNullOrEmpty(context.Variables.Get(Constants.Variables.Actions.WorkflowDebug)))
-                    {
-                        context.Output("Starting debugger, waiting for connection");
-
-                        var timeoutInSeconds = 120;
-
-                        var debugServer = this.HostContext.GetService<IDebugServer>();
-                        if (await debugServer.WaitForConnection(context, timeoutInSeconds))
-                        {
-                            context.Output("Debugger connected");
-                        }
-                        else
-                        {
-                            context.Output($"No debugger connection within {timeoutInSeconds}s");
-                        }
                     }
 
                     return steps;
