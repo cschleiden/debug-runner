@@ -11,14 +11,18 @@ namespace Runner.Worker.Debugger
   [ServiceLocator(Default = typeof(DebugServer))]
   public interface IDebugServer : IRunnerService
   {
-    Task<bool> WaitForConnection(IExecutionContext context, int timeoutSeconds);
+    Task<bool> WaitForConnection(IExecutionContext context, object data);
+
+    Task<string> GetTaskDisplayName();
   }
 
   public class DebugServer : RunnerService, IDebugServer
   {
+    private const int TimeoutSeconds = 120;
+    
     private IDebugAdapter _adapter;
 
-    public async Task<bool> WaitForConnection(IExecutionContext context, int timeoutSeconds)
+    public async Task<bool> WaitForConnection(IExecutionContext context, object _)
     {
       // TODO: Use external address here? 
       var localAddr = IPAddress.Parse("127.0.0.1");
@@ -30,7 +34,7 @@ namespace Runner.Worker.Debugger
       var connected = false;
       
       var cts = new CancellationTokenSource();
-      cts.CancelAfter(timeoutSeconds * 1_000);
+      cts.CancelAfter(TimeoutSeconds * 1_000);
       var cancellationToken = cts.Token;
 
       TcpClient client = null;
@@ -40,7 +44,7 @@ namespace Runner.Worker.Debugger
         // ReSharper disable once AccessToModifiedClosure
         if (!connected)
         {
-          context.Output($"No connection within {timeoutSeconds} seconds, skipping.");
+          context.Output($"No connection within {TimeoutSeconds} seconds, skipping.");
           server.Stop();
         }
       }))
@@ -72,9 +76,22 @@ namespace Runner.Worker.Debugger
           
         // Override the default NoopHandler registration
         this.HostContext.SetServiceType<IDebugHandler, DebugHandler>();
+        
+        // Override the default paginger logger implementation
+        this.HostContext.SetServiceType<IPagingLogger, DebugLogger>();
       }
 
       return connected;
     }
+
+    public Task<string> GetTaskDisplayName()
+    {
+      return Task.FromResult($"Debugger waiting on: {Address}:{Port}");
+    }
+
+    // TODO: We need to figure out how to get the external IP here
+    private string Address => "127.0.0.1";
+
+    private int Port => 41085;
   }
 }

@@ -21,9 +21,9 @@ namespace Runner.Worker.Debugger
 
         public void Write(string message)
         {
-            string line = $"{DateTime.UtcNow.ToString("O")} {message}";
+            string line = $"{DateTime.UtcNow:O} {message}";
             var handler = this._context.GetService<IDebugHandler>();
-            handler.WriteLog(message);
+            handler.WriteLog(line);
 
             this.TotalLines++;
             if (line.IndexOf('\n') != -1)
