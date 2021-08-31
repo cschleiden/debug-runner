@@ -143,7 +143,8 @@ namespace GitHub.DistributedTask.WebApi
         public DateTime? LockedUntil
         {
             get;
-            internal set;
+            //internal set;
+            set;
         }
 
         /// <summary>
