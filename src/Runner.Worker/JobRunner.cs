@@ -38,20 +38,21 @@ namespace GitHub.Runner.Worker
 
             DateTime jobStartTimeUtc = DateTime.UtcNow;
 
-            ServiceEndpoint systemConnection = message.Resources.Endpoints.Single(x => string.Equals(x.Name, WellKnownServiceEndpointNames.SystemVssConnection, StringComparison.OrdinalIgnoreCase));
+            // ServiceEndpoint systemConnection = message.Resources.Endpoints.Single(x => string.Equals(x.Name, WellKnownServiceEndpointNames.SystemVssConnection, StringComparison.OrdinalIgnoreCase));
 
             // Setup the job server and job server queue.
             var jobServer = HostContext.GetService<IJobServer>();
-            VssCredentials jobServerCredential = VssUtil.GetVssCredential(systemConnection);
-            Uri jobServerUrl = systemConnection.Url;
+            // VssCredentials jobServerCredential = VssUtil.GetVssCredential(systemConnection);
+            // Uri jobServerUrl = systemConnection.Url;
 
-            Trace.Info($"Creating job server with URL: {jobServerUrl}");
+            // Trace.Info($"Creating job server with URL: {jobServerUrl}");
             // jobServerQueue is the throttling reporter.
-            _jobServerQueue = HostContext.GetService<IJobServerQueue>();
-            VssConnection jobConnection = VssUtil.CreateConnection(jobServerUrl, jobServerCredential, new DelegatingHandler[] { new ThrottlingReportHandler(_jobServerQueue) });
-            await jobServer.ConnectAsync(jobConnection);
-
-            _jobServerQueue.Start(message);
+            // TODO: Disabling job reporting for now
+            // _jobServerQueue = HostContext.GetService<IJobServerQueue>();
+            // VssConnection jobConnection = VssUtil.CreateConnection(jobServerUrl, jobServerCredential, new DelegatingHandler[] { new ThrottlingReportHandler(_jobServerQueue) });
+            // await jobServer.ConnectAsync(jobConnection);
+            //
+            // _jobServerQueue.Start(message);
             HostContext.WritePerfCounter($"WorkerJobServerQueueStarted_{message.RequestId.ToString()}");
 
             IExecutionContext jobContext = null;

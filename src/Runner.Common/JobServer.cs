@@ -8,7 +8,8 @@ using GitHub.Services.WebApi;
 
 namespace GitHub.Runner.Common
 {
-    [ServiceLocator(Default = typeof(JobServer))]
+    // HACK: We should use either-or depending on some repository flag
+    [ServiceLocator(Default = typeof(JobServerGH))]
     public interface IJobServer : IRunnerService
     {
         Task ConnectAsync(VssConnection jobConnection);

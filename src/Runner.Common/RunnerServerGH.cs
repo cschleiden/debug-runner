@@ -8,6 +8,7 @@ using GitHub.Runner.Common.Util;
 using GitHub.Services.WebApi;
 using GitHub.Services.Common;
 using GitHub.Runner.Sdk;
+using Newtonsoft.Json;
 
 namespace GitHub.Runner.Common
 {
@@ -181,8 +182,7 @@ namespace GitHub.Runner.Common
 
         public Task<TaskAgentSession> CreateAgentSessionAsync(Int32 poolId, TaskAgentSession session, CancellationToken cancellationToken)
         {
-            CheckConnection(RunnerConnectionType.MessageQueue);
-            return _messageTaskAgentClient.CreateAgentSessionAsync(poolId, session, cancellationToken: cancellationToken);
+            return Task.FromResult(new TaskAgentSession());
         }
 
         public Task DeleteAgentMessageAsync(Int32 poolId, Int64 messageId, Guid sessionId, CancellationToken cancellationToken)
@@ -208,8 +208,26 @@ namespace GitHub.Runner.Common
 
             var httpClient = new HttpClient();
 
-            var result = await httpClient.GetAsync(new Uri($"http://localhost:5014/messages/{sessionId}"));
-            
+            using (var result =
+                await httpClient.GetAsync(new Uri($"http://localhost:5014/messages?session_id={sessionId}")))
+            {
+
+                if (!result.IsSuccessStatusCode)
+                {
+                    Console.WriteLine("Received error");
+                    return new TaskAgentMessage();
+                }
+                
+                Console.WriteLine("Received message");
+                var msg = await result.Content.ReadAsAsync<TaskAgentMessage>();
+
+                if (msg != null)
+                {
+                    Console.WriteLine($"Deserialized ${msg.MessageType}");
+                }
+
+                return msg;
+            }
         }
 
         //-----------------------------------------------------------------

@@ -17,7 +17,9 @@ namespace GitHub.Runner.Common
         JobRequest
     }
 
-    [ServiceLocator(Default = typeof(RunnerServer))]
+    // TODO: If this works, make implementation dependent on some kind of repository flag? Talk first
+    // to service and then depending on the result use either implementation? 
+    [ServiceLocator(Default = typeof(RunnerServerGH))]
     public interface IRunnerServer : IRunnerService
     {
         Task ConnectAsync(Uri serverUrl, VssCredentials credentials);
