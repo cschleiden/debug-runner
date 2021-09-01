@@ -426,6 +426,7 @@ namespace GitHub.Runner.Common
 
                         update.PendingRecords = MergeTimelineRecords(update.PendingRecords);
 
+                        // We are not supporting detail timeline records
                         foreach (var detailTimeline in update.PendingRecords.Where(r => r.Details != null))
                         {
                             if (!_allTimelines.Contains(detailTimeline.Details.Id))

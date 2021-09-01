@@ -485,9 +485,9 @@ namespace GitHub.Runner.Listener
 
                         // we get first jobrequest renew succeed and start the worker process with the job message.
                         // send notification to machine provisioner.
-                        var systemConnection = message.Resources.Endpoints.SingleOrDefault(x => string.Equals(x.Name, WellKnownServiceEndpointNames.SystemVssConnection, StringComparison.OrdinalIgnoreCase));
-                        var accessToken = systemConnection?.Authorization?.Parameters["AccessToken"];
-                        notification.JobStarted(message.JobId, accessToken, systemConnection.Url);
+                        // var systemConnection = message.Resources.Endpoints.SingleOrDefault(x => string.Equals(x.Name, WellKnownServiceEndpointNames.SystemVssConnection, StringComparison.OrdinalIgnoreCase));
+                        // var accessToken = systemConnection?.Authorization?.Parameters["AccessToken"];
+                        // notification.JobStarted(message.JobId, accessToken, systemConnection.Url);
 
                         HostContext.WritePerfCounter($"SentJobToWorker_{requestId.ToString()}");
 
@@ -509,9 +509,9 @@ namespace GitHub.Runner.Listener
                                     Trace.Info($"Return code {returnCode} indicate worker encounter an unhandled exception or app crash, attach worker stdout/stderr to JobRequest result.");
 
                                     var jobServer = HostContext.GetService<IJobServer>();
-                                    VssCredentials jobServerCredential = VssUtil.GetVssCredential(systemConnection);
-                                    VssConnection jobConnection = VssUtil.CreateConnection(systemConnection.Url, jobServerCredential);
-                                    await jobServer.ConnectAsync(jobConnection);
+                                    // VssCredentials jobServerCredential = VssUtil.GetVssCredential(systemConnection);
+                                    // VssConnection jobConnection = VssUtil.CreateConnection(systemConnection.Url, jobServerCredential);
+                                    // await jobServer.ConnectAsync(jobConnection);
 
                                     await LogWorkerProcessUnhandledException(jobServer, message, detailInfo);
 

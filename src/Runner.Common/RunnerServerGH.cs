@@ -206,28 +206,25 @@ namespace GitHub.Runner.Common
             // CheckConnection(RunnerConnectionType.MessageQueue);
             // return _messageTaskAgentClient.GetMessageAsync(poolId, sessionId, lastMessageId, cancellationToken: cancellationToken);
 
-            var httpClient = new HttpClient();
-
-            using (var result =
-                await httpClient.GetAsync(new Uri($"http://localhost:5014/messages?session_id={sessionId}")))
+            using var httpClient = new HttpClient();
+            using var result =
+                await httpClient.GetAsync(new Uri($"http://localhost:5014/messages?session_id={sessionId}"));
+            if (!result.IsSuccessStatusCode)
             {
-
-                if (!result.IsSuccessStatusCode)
-                {
-                    Console.WriteLine("Received error");
-                    return new TaskAgentMessage();
-                }
-                
-                Console.WriteLine("Received message");
-                var msg = await result.Content.ReadAsAsync<TaskAgentMessage>();
-
-                if (msg != null)
-                {
-                    Console.WriteLine($"Deserialized ${msg.MessageType}");
-                }
-
-                return msg;
+                Console.WriteLine("Received error");
+                return new TaskAgentMessage();
             }
+                
+            Console.WriteLine("Received message");
+            var msg = await result.Content.ReadAsAsync<TaskAgentMessage>();
+            Console.WriteLine($"Msg is {msg}");
+
+            if (msg != null)
+            {
+                Console.WriteLine($"Deserialized {msg.MessageId} {msg.MessageType}");
+            }
+
+            return msg;
         }
 
         //-----------------------------------------------------------------

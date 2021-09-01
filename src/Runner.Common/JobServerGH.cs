@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using GitHub.Services.WebApi;
@@ -98,6 +100,9 @@ namespace GitHub.Runner.Common
             // CheckConnection();
             // return _taskClient.CreateTimelineAsync(scopeIdentifier, hubName, planId, new Timeline(timelineId), cancellationToken: cancellationToken);
 
+            this.Trace.Verbose($"Creating timeline {timelineId}");
+            
+            // We are never calling this for GH actions.
             return Task.FromResult(new Timeline(timelineId));
         }
 
@@ -105,16 +110,31 @@ namespace GitHub.Runner.Common
         {
             // CheckConnection();
             // return _taskClient.UpdateTimelineRecordsAsync(scopeIdentifier, hubName, planId, timelineId, records, cancellationToken: cancellationToken);
+            
+            foreach (var timelineRecord in records) 
+            {
+                this.Trace.Verbose($"Update TimelineRecord {timelineRecord.Name} {timelineRecord.State} {timelineRecord.Result}");
+            }
 
             return Task.FromResult(new List<TimelineRecord>());
         }
 
-        public Task RaisePlanEventAsync<T>(Guid scopeIdentifier, string hubName, Guid planId, T eventData, CancellationToken cancellationToken) where T : JobEvent
+        public async Task RaisePlanEventAsync<T>(Guid scopeIdentifier, string hubName, Guid planId, T eventData, CancellationToken cancellationToken) where T : JobEvent
         {
             // CheckConnection();
             // return _taskClient.RaisePlanEventAsync(scopeIdentifier, hubName, planId, eventData, cancellationToken: cancellationToken);
+            
+            this.Trace.Info($"RaisePlanEventAsync: {eventData.Name}");
 
-            return Task.CompletedTask;
+            using var httpClient = new HttpClient();
+            using var result =
+                await httpClient.PostAsync(new Uri($"http://localhost:5014/events?job_id={eventData.JobId}&signal_name={eventData.Name}"), null);
+            if (!result.IsSuccessStatusCode)
+            {
+                throw new Exception("Could not sent event");
+            }
+
+            this.Trace.Info($"RaisedPlanEventAsync: {eventData.Name} {eventData.JobId}");
         }
 
         public Task<Timeline> GetTimelineAsync(Guid scopeIdentifier, string hubName, Guid planId, Guid timelineId, CancellationToken cancellationToken)
