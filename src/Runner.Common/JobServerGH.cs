@@ -2,11 +2,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using GitHub.Services.WebApi;
+using Newtonsoft.Json;
 
 namespace GitHub.Runner.Common
 {
@@ -106,7 +108,7 @@ namespace GitHub.Runner.Common
             return Task.FromResult(new Timeline(timelineId));
         }
 
-        public Task<List<TimelineRecord>> UpdateTimelineRecordsAsync(Guid scopeIdentifier, string hubName, Guid planId, Guid timelineId, IEnumerable<TimelineRecord> records, CancellationToken cancellationToken)
+        public async Task<List<TimelineRecord>> UpdateTimelineRecordsAsync(Guid scopeIdentifier, string hubName, Guid planId, Guid timelineId, IEnumerable<TimelineRecord> records, CancellationToken cancellationToken)
         {
             // CheckConnection();
             // return _taskClient.UpdateTimelineRecordsAsync(scopeIdentifier, hubName, planId, timelineId, records, cancellationToken: cancellationToken);
@@ -115,8 +117,25 @@ namespace GitHub.Runner.Common
             {
                 this.Trace.Verbose($"Update TimelineRecord {timelineRecord.Name} {timelineRecord.State} {timelineRecord.Result}");
             }
+            
+            this.Trace.Verbose("Step updates:");
+            
+            using var httpClient = new HttpClient();
 
-            return Task.FromResult(new List<TimelineRecord>());
+            foreach (var stepRecord in records.Where(x => x.RecordType == "Task" /* ExecutionContextType.Task */))
+            {
+                this.Trace.Verbose(JsonConvert.SerializeObject(stepRecord));
+                
+                // Certainly not trying to win a prize for nicest code here. ParentId is the job id
+                using var result =
+                    await httpClient.PostAsJsonAsync(new Uri($"http://localhost:5014/actions/timelines/{stepRecord.ParentId}"), stepRecord);
+                if (!result.IsSuccessStatusCode)
+                {
+                    throw new Exception("Could not sent record");
+                }
+            }
+
+            return records.ToList();
         }
 
         public async Task RaisePlanEventAsync<T>(Guid scopeIdentifier, string hubName, Guid planId, T eventData, CancellationToken cancellationToken) where T : JobEvent
@@ -128,7 +147,7 @@ namespace GitHub.Runner.Common
 
             using var httpClient = new HttpClient();
             using var result =
-                await httpClient.PostAsync(new Uri($"http://localhost:5014/events?job_id={eventData.JobId}&signal_name={eventData.Name}"), null);
+                await httpClient.PostAsync(new Uri($"http://localhost:5014/actions/events/{eventData.JobId}?signal_name={eventData.Name}"), null);
             if (!result.IsSuccessStatusCode)
             {
                 throw new Exception("Could not sent event");

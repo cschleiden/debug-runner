@@ -208,7 +208,7 @@ namespace GitHub.Runner.Common
 
             using var httpClient = new HttpClient();
             using var result =
-                await httpClient.GetAsync(new Uri($"http://localhost:5014/messages?session_id={sessionId}"));
+                await httpClient.GetAsync(new Uri($"http://localhost:5014/actions/messages/{sessionId}"));
             if (!result.IsSuccessStatusCode)
             {
                 Console.WriteLine("Received error");
