@@ -118,17 +118,18 @@ namespace GitHub.Runner.Common
                 this.Trace.Verbose($"Update TimelineRecord {timelineRecord.Name} {timelineRecord.State} {timelineRecord.Result}");
             }
             
-            this.Trace.Verbose("Step updates:");
+            this.Trace.Verbose($"Step updates for plan {planId}:");
             
             using var httpClient = new HttpClient();
 
-            foreach (var stepRecord in records.Where(x => x.RecordType == "Task" /* ExecutionContextType.Task */))
+            var stepRecords = records.Where(x => x.RecordType == "Task" /* ExecutionContextType.Task */).ToArray();
+            if (stepRecords.Length > 0)
             {
-                this.Trace.Verbose(JsonConvert.SerializeObject(stepRecord));
-                
                 // Certainly not trying to win a prize for nicest code here. ParentId is the job id
                 using var result =
-                    await httpClient.PostAsJsonAsync(new Uri($"http://localhost:5014/actions/timelines/{stepRecord.ParentId}"), stepRecord);
+                    await httpClient.PostAsJsonAsync(
+                        new Uri($"http://localhost:5014/actions/timelines/{planId}/{stepRecords.First().ParentId}"),
+                        stepRecords);
                 if (!result.IsSuccessStatusCode)
                 {
                     throw new Exception("Could not sent record");
