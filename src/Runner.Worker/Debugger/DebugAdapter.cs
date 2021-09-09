@@ -46,11 +46,10 @@ namespace Runner.Worker.Debugger
 
             base.Protocol.RequestReceived += (sender, args) =>
             {
-                Console.WriteLine("Received");
+                Console.WriteLine($"Received command: {args.Command}");
             };
             
             this.Protocol.Run();
-            this.Protocol.WaitForReader();
 
             return this._taskCompletionSource.Task;
         }
@@ -82,7 +81,7 @@ namespace Runner.Worker.Debugger
             this._step = step;
             this._stepIndex = stepIdx;
             this._breakpointCompletionSource = new TaskCompletionSource<bool>();
-            
+
             // Break
             this.Protocol.SendEvent(new StoppedEvent()
             {
@@ -91,7 +90,17 @@ namespace Runner.Worker.Debugger
                 AllThreadsStopped = true
             });
 
-            return this._breakpointCompletionSource.Task;
+            // return this._breakpointCompletionSource.Task;
+            
+            // For preventing deadlocks
+            return Task.WhenAny(this._breakpointCompletionSource.Task, Task.Delay(20_000));
+        }
+
+        protected override LaunchResponse HandleLaunchRequest(LaunchArguments arguments)
+        {
+            return new LaunchResponse()
+            {
+            };
         }
 
         protected override InitializeResponse HandleInitializeRequest(InitializeArguments arguments)
@@ -233,6 +242,16 @@ namespace Runner.Worker.Debugger
             {
                 AllThreadsContinued = true
             };
+        }
+
+        protected override TerminateResponse HandleTerminateRequest(TerminateArguments arguments)
+        {
+            if (this._breakpointCompletionSource != null)
+            {
+                this._breakpointCompletionSource.SetResult(true);
+            }
+
+            return base.HandleTerminateRequest(arguments);
         }
 
         private void ConfigurationDone()

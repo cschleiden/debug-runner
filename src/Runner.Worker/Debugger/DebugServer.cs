@@ -74,7 +74,7 @@ namespace Runner.Worker.Debugger
         // Override the default NoopHandler registration
         this.HostContext.SetServiceType<IDebugHandler, DebugHandler>();
         
-        // Override the default paginger logger implementation
+        // Override the default paging logger implementation
         this.HostContext.SetServiceType<IPagingLogger, DebugLogger>();
       }
 
