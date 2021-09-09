@@ -422,7 +422,15 @@ namespace GitHub.Runner.Common
 
         public void SetServiceType<TInterface, TImplementation>() where TInterface : class, IRunnerService
         {
-            this._serviceTypes.TryAdd(typeof(TInterface), typeof(TImplementation));
+            // this._serviceTypes.TryAdd(typeof(TInterface), typeof(TImplementation));
+            // We need to be able to override types
+            this._serviceTypes.AddOrUpdate(typeof(TInterface), x => typeof(TImplementation), (key, x) =>
+            {
+                // Clear all cached instances
+                _serviceInstances.TryRemove(key, out _);
+                
+                return typeof(TImplementation);
+            });
         }
 
         public void SetDefaultCulture(string name)

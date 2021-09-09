@@ -261,7 +261,7 @@ namespace GitHub.Runner.Worker
                     }
 
                     // Add optional debugger pre-step
-                    if (!string.IsNullOrEmpty(context.Variables.Get(Constants.Variables.Actions.WorkflowDebug)))
+                    if (!string.IsNullOrEmpty(context.Global.Variables.Get(Constants.Variables.Actions.WorkflowDebug)))
                     {
                         var debugServer = this.HostContext.GetService<IDebugServer>();
 
