@@ -46,6 +46,7 @@ namespace GitHub.Runner.Worker
             ArgUtil.NotNull(jobContext.JobSteps, nameof(jobContext.JobSteps));
 
             int stepIndex = -1;
+            int actionsStepIdx = -1;
 
             // TaskResult:
             //  Abandoned (Server set this.)
@@ -106,6 +107,8 @@ namespace GitHub.Runner.Worker
                 bool evaluateStepEnvFailed = false;
                 if (step is IActionRunner actionStep)
                 {
+                    ++actionsStepIdx;
+                    
                     // Set GITHUB_ACTION
                     step.ExecutionContext.SetGitHubContext("action", actionStep.Action.Name);
 
@@ -127,11 +130,11 @@ namespace GitHub.Runner.Worker
                         step.ExecutionContext.Error(ex);
                         CompleteStep(step, TaskResult.Failed);
                     }
+                    
+                    var debugHandler = this.HostContext.GetService<IDebugHandler>();
+                    // TODO: CS: Pass more state here so that we can evaluate context?
+                    await debugHandler?.BeforeStep(actionsStepIdx, jobContext, step);
                 }
-
-                var debugHandler = this.HostContext.GetService<IDebugHandler>();
-                // TODO: CS: Pass more state here so that we can evaluate context?
-                await debugHandler?.BeforeStep(stepIndex, jobContext, step);
 
                 if (!evaluateStepEnvFailed)
                 {

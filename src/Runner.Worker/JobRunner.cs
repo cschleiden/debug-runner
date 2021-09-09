@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Net.Http;
 using GitHub.Runner.Common;
 using GitHub.Runner.Sdk;
+using Runner.Worker.Debugger;
 
 namespace GitHub.Runner.Worker
 {
@@ -170,6 +171,13 @@ namespace GitHub.Runner.Worker
                 {
                     Trace.Info("Finalize job.");
                     jobExtension.FinalizeJob(jobContext, message, jobStartTimeUtc);
+                }
+                
+                // If debugger was attached, send termination events
+                var debugHandler = this.HostContext.GetService<IDebugHandler>();
+                if (debugHandler != null)
+                {
+                    await debugHandler.Stop();
                 }
 
                 Trace.Info($"Job result after all job steps finish: {jobContext.Result ?? TaskResult.Succeeded}");
