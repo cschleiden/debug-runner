@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using GitHub.DistributedTask.Expressions2.Sdk;
+using GitHub.DistributedTask.ObjectTemplating;
+using GitHub.DistributedTask.ObjectTemplating.Tokens;
 using GitHub.DistributedTask.Pipelines.ContextData;
 using GitHub.DistributedTask.WebApi;
 using GitHub.Runner.Common;
@@ -56,7 +58,6 @@ namespace Runner.Worker.Debugger
 
         public Task Stop()
         {
-            this.Protocol.SendEvent(new ExitedEvent(exitCode: 0));
             this.Protocol.SendEvent(new TerminatedEvent());
             this.Protocol.Stop();
             this.Protocol.WaitForReader();
@@ -71,7 +72,7 @@ namespace Runner.Worker.Debugger
 
         public Task Break(int stepIdx, IExecutionContext jobContext, IStep step)
         {
-            if (!this.breakpoints.Contains(stepIdx))
+            if (!this.Protocol.IsRunning || !this.breakpoints.Contains(stepIdx))
             {
                 // Continue
                 return Task.CompletedTask;
@@ -89,18 +90,15 @@ namespace Runner.Worker.Debugger
                 Description = "Paused at step",
                 AllThreadsStopped = true
             });
-
-            // return this._breakpointCompletionSource.Task;
             
-            // For preventing deadlocks
-            return Task.WhenAny(this._breakpointCompletionSource.Task, Task.Delay(20_000));
+            this.Log($"Stopped at step {stepIdx}");
+            
+            return this._breakpointCompletionSource.Task;
         }
 
-        protected override LaunchResponse HandleLaunchRequest(LaunchArguments arguments)
+        protected override AttachResponse HandleAttachRequest(AttachArguments arguments)
         {
-            return new LaunchResponse()
-            {
-            };
+            return new AttachResponse();
         }
 
         protected override InitializeResponse HandleInitializeRequest(InitializeArguments arguments)
@@ -140,14 +138,14 @@ namespace Runner.Worker.Debugger
                         Name = this._step.DisplayName,
                         Column = 0,
                         Line = this._stepIndex, // Use the Line field to transmit the idx, the adapter will map it back to the actual line number
-                        Source = new Source()
+                        Source = new Source() // The client will fill this in
                         {
                         }
                     },
                     new StackFrame()
                     {
                         Id = 1,
-                        Name = "Job",
+                        Name = "Job", // TODO: Use job name here? 
                         Column = 0,
                         Line = 0,
                         Source = new Source()
@@ -161,69 +159,109 @@ namespace Runner.Worker.Debugger
         // This will grow and grow... need to reset on stop maybe?
         private List<KeyValuePair<string, PipelineContextData>> varReferences = new List<KeyValuePair<string, PipelineContextData>>();
 
+        private int topLevelOffset = 100;
+
         protected override VariablesResponse HandleVariablesRequest(VariablesArguments arguments)
         {
-            if (arguments.VariablesReference == 1)
+            try
             {
-                // 1 are the top-level keys for the step
-                return new VariablesResponse()
+                if (arguments.VariablesReference == 1)
                 {
-                    Variables = this._step.ExecutionContext.ExpressionValues.Keys
-                        .Select((k, idx) =>
-                        {
-                            this.varReferences.Add(new KeyValuePair<string, PipelineContextData>(k, this._step.ExecutionContext.ExpressionValues[k]));
-                            
-                            return new Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages.Variable(k,
-                                "Object", 10 + this.varReferences.Count - 1);
-                        })
-                        .ToList()
-                };
-            }
-            else
-            {
-                var v = this.varReferences[arguments.VariablesReference - 10];
-                if (v.Value is IReadOnlyObject dict)
-                {
+                    // 1 are the top-level keys for the step
                     return new VariablesResponse()
                     {
-                        Variables = dict.Keys
+                        Variables = this._step.ExecutionContext.ExpressionValues.Keys
                             .Select((k, idx) =>
                             {
-                                var value = dict[k];
+                                this.varReferences.Add(new KeyValuePair<string, PipelineContextData>(k,
+                                    this._step.ExecutionContext.ExpressionValues[k]));
 
-                                if (value is DictionaryContextData || value is CaseSensitiveDictionaryContextData)
-                                {
-                                    this.varReferences.Add(new KeyValuePair<string, PipelineContextData>(k, dict[k] as PipelineContextData));
-                                    return new Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages.Variable(
-                                        k,
-                                        "Object", 
-                                        this.varReferences.Count - 1 + 10);
-                                }
-                                else
-                                {
-                                    return new Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages.Variable(
-                                        k,
-                                        value.ToString(), 
-                                        0);
-                                }
-                                
+                                return new Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages.Variable(k,
+                                    "Object", this.topLevelOffset + this.varReferences.Count - 1);
                             })
                             .ToList()
                     };
                 }
                 else
                 {
-                    return new VariablesResponse()
+                    var v = this.varReferences[arguments.VariablesReference - this.topLevelOffset];
+                    if (v.Value is IReadOnlyObject dict)
                     {
-                        Variables = new List<Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages.Variable>()
+                        return new VariablesResponse()
                         {
-                            new Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages.Variable(
-                                v.Key,
-                                v.Value.ToString(), 
-                                0)
-                        }
-                    };
+                            Variables = dict.Keys
+                                .Select((k, idx) =>
+                                {
+                                    var value = dict[k];
+
+                                    if (value is DictionaryContextData || value is CaseSensitiveDictionaryContextData)
+                                    {
+                                        this.varReferences.Add(
+                                            new KeyValuePair<string, PipelineContextData>(k,
+                                                dict[k] as PipelineContextData));
+                                        return new Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages.Variable(
+                                            k,
+                                            "Object",
+                                            this.varReferences.Count - 1 + this.topLevelOffset);
+                                    }
+                                    else
+                                    {
+                                        return new Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages.Variable(
+                                            k,
+                                            value?.ToString() ?? "null", 
+                                            0);
+                                    }
+
+                                })
+                                .ToList()
+                        };
+                    }
+                    else
+                    {
+                        return new VariablesResponse()
+                        {
+                            Variables = new List<Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages.Variable>()
+                            {
+                                new Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages.Variable(
+                                    v.Key,
+                                    v.Value?.ToString() ?? "null",
+                                    0)
+                            }
+                        };
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                this.Log(ex.ToString());
+                
+                return new VariablesResponse()
+                {
+                    Variables = new List<Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages.Variable>()
+                };
+            }
+        }
+
+        protected override EvaluateResponse HandleEvaluateRequest(EvaluateArguments arguments)
+        {
+            if (this._step == null)
+            {
+                return new EvaluateResponse();
+            }
+
+            try
+            {
+                var evaluator = this._step.ExecutionContext.ToPipelineTemplateEvaluator();
+                var value = evaluator.EvaluateStepDisplayName(
+                    new BasicExpressionToken(null, null, null, expression: arguments.Expression),
+                    this._step.ExecutionContext.ExpressionValues,
+                    this._step.ExecutionContext.ExpressionFunctions);
+    
+                return new EvaluateResponse(value, 0);
+            }
+            catch
+            {
+                return new EvaluateResponse("Could not evaluate expression", 0);
             }
         }
 
@@ -246,12 +284,20 @@ namespace Runner.Worker.Debugger
 
         protected override TerminateResponse HandleTerminateRequest(TerminateArguments arguments)
         {
-            if (this._breakpointCompletionSource != null)
-            {
-                this._breakpointCompletionSource.SetResult(true);
-            }
+            this._breakpointCompletionSource?.SetResult(true);
 
-            return base.HandleTerminateRequest(arguments);
+            this.Stop();
+
+            return new TerminateResponse();
+        }
+
+        protected override DisconnectResponse HandleDisconnectRequest(DisconnectArguments arguments)
+        {
+            this._breakpointCompletionSource?.SetResult(true);
+            
+            this.Stop();
+
+            return new DisconnectResponse();
         }
 
         private void ConfigurationDone()

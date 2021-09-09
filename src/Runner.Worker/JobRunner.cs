@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,6 +14,7 @@ using GitHub.Runner.Sdk;
 using GitHub.Services.Common;
 using GitHub.Services.WebApi;
 using Pipelines = GitHub.DistributedTask.Pipelines;
+using Runner.Worker.Debugger;
 
 namespace GitHub.Runner.Worker
 {
@@ -187,6 +188,13 @@ namespace GitHub.Runner.Worker
                 {
                     Trace.Info("Finalize job.");
                     jobExtension.FinalizeJob(jobContext, message, jobStartTimeUtc);
+                }
+
+                // If debugger was attached, send termination events
+                var debugHandler = this.HostContext.GetService<IDebugHandler>();
+                if (debugHandler != null)
+                {
+                    await debugHandler.Stop();
                 }
 
                 Trace.Info($"Job result after all job steps finish: {jobContext.Result ?? TaskResult.Succeeded}");
