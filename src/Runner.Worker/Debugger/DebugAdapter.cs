@@ -53,8 +53,8 @@ namespace Runner.Worker.Debugger
 
             this.Protocol.DispatcherError += (sender, args) =>
             {
-                this._taskCompletionSource.SetResult(true);
-                this._breakpointCompletionSource?.SetResult(true);
+                this._taskCompletionSource.TrySetResult(true);
+                this._breakpointCompletionSource?.TrySetResult(true);
             };
             
             this.Protocol.Run();
