@@ -302,7 +302,7 @@ namespace Runner.Worker.Debugger
         {
             this._breakpointCompletionSource?.SetResult(true);
             
-            this.Stop();
+            this.Protocol.Stop();
 
             return new DisconnectResponse();
         }
