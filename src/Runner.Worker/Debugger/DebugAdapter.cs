@@ -50,6 +50,12 @@ namespace Runner.Worker.Debugger
             {
                 Console.WriteLine($"Received command: {args.Command}");
             };
+
+            this.Protocol.DispatcherError += (sender, args) =>
+            {
+                this._taskCompletionSource.SetResult(true);
+                this._breakpointCompletionSource?.SetResult(true);
+            };
             
             this.Protocol.Run();
 
@@ -93,7 +99,8 @@ namespace Runner.Worker.Debugger
             
             this.Log($"Stopped at step {stepIdx}");
             
-            return this._breakpointCompletionSource.Task;
+            // Prevent deadlocks during development
+            return Task.WhenAny(this._breakpointCompletionSource.Task, Task.Delay(TimeSpan.FromMinutes(2)));
         }
 
         protected override AttachResponse HandleAttachRequest(AttachArguments arguments)
