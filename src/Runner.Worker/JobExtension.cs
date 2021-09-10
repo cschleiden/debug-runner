@@ -265,7 +265,9 @@ namespace GitHub.Runner.Worker
                     {
                         var debugServer = this.HostContext.GetService<IDebugServer>();
 
-                        preJobSteps.Add(new JobExtensionRunner(runAsync: debugServer.WaitForConnection,
+                        preJobSteps.Add(new JobExtensionRunner(runAsync:
+                            (IExecutionContext executionContext, object data) => Task.WhenAny(debugServer.WaitForConnection(executionContext, data),
+                                Task.Delay(TimeSpan.FromSeconds(120))),
                             condition: $"{PipelineTemplateConstants.Success}()",
                             displayName: await debugServer.GetTaskDisplayName(),
                             data: null
