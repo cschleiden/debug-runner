@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -257,12 +258,13 @@ namespace GitHub.Runner.Worker
                                 // HACK! Add debugger step
                                 var cts = new CancellationTokenSource();
 #pragma warning disable CS4014
-                                Task.Run(() =>
+                                Task.Run(async () =>
 #pragma warning restore CS4014
                                 {
                                     while (!cts.Token.IsCancellationRequested)
                                     {
                                         step.ExecutionContext.Output("Waiting 120s for debugger connection...");
+                                        await Task.Delay(3_000, cts.Token);
                                     }
                                 });
 
