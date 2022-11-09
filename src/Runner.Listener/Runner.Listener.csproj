@@ -33,6 +33,7 @@
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugType>portable</DebugType>
+    <DefineConstants>;OS_OSX;TRACE;TRACE;X64</DefineConstants>
   </PropertyGroup>
 
 </Project>

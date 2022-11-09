@@ -22,13 +22,13 @@ namespace Runner.Worker.Debugger
         Task Run(Stream input, Stream output);
         Task Stop();
         void Log(string message);
-        Task Break(int stepIdx, IExecutionContext jobContext, IStep step);
+        Task Break(int stepIdx, IExecutionContext jobContext, IStep step, bool force = false);
     }
-    
+
     public class DebugAdapter : DebugAdapterBase, IDebugAdapter
     {
         private HashSet<int> breakpoints = new HashSet<int>();
-        
+
         private TaskCompletionSource<bool> _taskCompletionSource = new TaskCompletionSource<bool>();
         private TaskCompletionSource<bool> _breakpointCompletionSource = new TaskCompletionSource<bool>();
         private IExecutionContext _jobContext;
@@ -56,7 +56,7 @@ namespace Runner.Worker.Debugger
                 this._taskCompletionSource.TrySetResult(true);
                 this._breakpointCompletionSource?.TrySetResult(true);
             };
-            
+
             this.Protocol.Run();
 
             return this._taskCompletionSource.Task;
@@ -67,7 +67,7 @@ namespace Runner.Worker.Debugger
             this.Protocol.SendEvent(new TerminatedEvent());
             this.Protocol.Stop();
             this.Protocol.WaitForReader();
-            
+
             return Task.CompletedTask;
         }
 
@@ -76,9 +76,9 @@ namespace Runner.Worker.Debugger
             this.Protocol.SendEvent(new OutputEvent(message));
         }
 
-        public Task Break(int stepIdx, IExecutionContext jobContext, IStep step)
+        public Task Break(int stepIdx, IExecutionContext jobContext, IStep step, bool force = false)
         {
-            if (!this.Protocol.IsRunning || !this.breakpoints.Contains(stepIdx))
+            if (!this.Protocol.IsRunning || (!force && !this.breakpoints.Contains(stepIdx)))
             {
                 // Continue
                 return Task.CompletedTask;
@@ -96,11 +96,11 @@ namespace Runner.Worker.Debugger
                 Description = "Paused at step",
                 AllThreadsStopped = true
             });
-            
+
             this.Log($"Stopped at step {stepIdx}");
-            
+
             // Prevent deadlocks during development
-            return Task.WhenAny(this._breakpointCompletionSource.Task, Task.Delay(TimeSpan.FromMinutes(2)));
+            return Task.WhenAny(this._breakpointCompletionSource.Task, Task.Delay(TimeSpan.FromMinutes(1)));
         }
 
         protected override AttachResponse HandleAttachRequest(AttachArguments arguments)
@@ -152,7 +152,7 @@ namespace Runner.Worker.Debugger
                     new StackFrame()
                     {
                         Id = 1,
-                        Name = "Job", // TODO: Use job name here? 
+                        Name = "Job", // TODO: Use job name here?
                         Column = 0,
                         Line = 0,
                         Source = new Source()
@@ -162,7 +162,7 @@ namespace Runner.Worker.Debugger
                 }
             };
         }
-        
+
         // This will grow and grow... need to reset on stop maybe?
         private List<KeyValuePair<string, PipelineContextData>> varReferences = new List<KeyValuePair<string, PipelineContextData>>();
 
@@ -215,7 +215,7 @@ namespace Runner.Worker.Debugger
                                     {
                                         return new Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages.Variable(
                                             k,
-                                            value?.ToString() ?? "null", 
+                                            value?.ToString() ?? "null",
                                             0);
                                     }
 
@@ -241,7 +241,7 @@ namespace Runner.Worker.Debugger
             catch (Exception ex)
             {
                 this.Log(ex.ToString());
-                
+
                 return new VariablesResponse()
                 {
                     Variables = new List<Microsoft.VisualStudio.Shared.VSCodeDebugProtocol.Messages.Variable>()
@@ -263,7 +263,7 @@ namespace Runner.Worker.Debugger
                     new BasicExpressionToken(null, null, null, expression: arguments.Expression),
                     this._step.ExecutionContext.ExpressionValues,
                     this._step.ExecutionContext.ExpressionFunctions);
-    
+
                 return new EvaluateResponse(value, 0);
             }
             catch
@@ -275,7 +275,7 @@ namespace Runner.Worker.Debugger
         protected override ConfigurationDoneResponse HandleConfigurationDoneRequest(ConfigurationDoneArguments arguments)
         {
             this.ConfigurationDone();
-            
+
             return new ConfigurationDoneResponse();
         }
 
@@ -301,7 +301,7 @@ namespace Runner.Worker.Debugger
         protected override DisconnectResponse HandleDisconnectRequest(DisconnectArguments arguments)
         {
             this._breakpointCompletionSource?.SetResult(true);
-            
+
             this.Protocol.Stop();
 
             return new DisconnectResponse();

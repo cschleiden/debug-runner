@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ using GitHub.Runner.Common;
 using GitHub.Runner.Common.Util;
 using GitHub.Runner.Sdk;
 using GitHub.Runner.Worker.Expressions;
+using GitHub.Services.Common;
 using Runner.Worker.Debugger;
 using ObjectTemplating = GitHub.DistributedTask.ObjectTemplating;
 using Pipelines = GitHub.DistributedTask.Pipelines;
@@ -109,7 +111,7 @@ namespace GitHub.Runner.Worker
                 if (step is IActionRunner actionStep)
                 {
                     ++actionsStepIdx;
-                    
+
                     // Set GITHUB_ACTION
                     step.ExecutionContext.SetGitHubContext("action", actionStep.Action.Name);
 
@@ -132,10 +134,11 @@ namespace GitHub.Runner.Worker
                         step.ExecutionContext.Error(ex);
                         CompleteStep(step, TaskResult.Failed);
                     }
-                    
-                    var debugHandler = this.HostContext.GetService<IDebugHandler>();
-                    // TODO: CS: Pass more state here so that we can evaluate context?
-                    await debugHandler?.BeforeStep(actionsStepIdx, jobContext, step);
+
+                    // TODO: CS: Disabling this for step debugging experiment
+                    // var debugHandler = this.HostContext.GetService<IDebugHandler>();
+                    // // TODO: CS: Pass more state here so that we can evaluate context?
+                    // await debugHandler?.BeforeStep(actionsStepIdx, jobContext, step);
                 }
 
                 if (!evaluateStepEnvFailed)
@@ -238,6 +241,43 @@ namespace GitHub.Runner.Worker
                         {
                             // Run the step
                             await RunStepAsync(step, jobContext.CancellationToken);
+
+                            // Did step fail? Allow for debugger connection
+                            if (step.ExecutionContext.Result == TaskResult.Failed
+                            && jobContext.JobContext.Status != ActionResult.Failure
+                            && !string.IsNullOrEmpty(jobContext.Global.Variables.Get(Constants.Variables.Actions.StepDebug)))
+                            {
+                                // Step failed, if we are debugging, do something
+                                step.ExecutionContext.Output("Failure, stopping for 30s and waiting for debugger");
+
+                                // TODO: CS: Start debug server
+                                // TODO: CS: Prepare vscode-workspace
+                                // TODO: CS: Add vscode debug link to the
+
+                                // HACK! Add debugger step
+                                step.ExecutionContext.Output("Waiting 120s for debugger connection...");
+                                var debugServer = this.HostContext.GetService<IDebugServer>();
+
+                                var debugServerTask = debugServer.WaitForConnection(step.ExecutionContext, null);
+                                var delayTask = Task.Delay(TimeSpan.FromSeconds(120));
+                                var r = await Task.WhenAny(debugServerTask, delayTask);
+
+                                if (r == delayTask || !(r as Task<bool>).Result)
+                                {
+                                    step.ExecutionContext.Output("Continuing with workflow execution.");
+                                }
+                                else
+                                {
+                                    step.ExecutionContext.Output("Debugger connected, breaking");
+
+                                    // Wait a bit for debugger initialization to complete
+                                    await Task.Delay(3_000);
+
+                                    var adapter = this.HostContext.GetService<IDebugAdapter>();
+                                    await adapter.Break(stepIndex, step.ExecutionContext, step, force: true);
+                                }
+                            }
+
                             CompleteStep(step);
                         }
                     }
