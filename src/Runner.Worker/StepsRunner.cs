@@ -255,12 +255,24 @@ namespace GitHub.Runner.Worker
                                 // TODO: CS: Add vscode debug link to the
 
                                 // HACK! Add debugger step
-                                step.ExecutionContext.Output("Waiting 120s for debugger connection...");
+                                var cts = new CancellationTokenSource();
+#pragma warning disable CS4014
+                                Task.Run(() =>
+#pragma warning restore CS4014
+                                {
+                                    while (!cts.Token.IsCancellationRequested)
+                                    {
+                                        step.ExecutionContext.Output("Waiting 120s for debugger connection...");
+                                    }
+                                });
+
                                 var debugServer = this.HostContext.GetService<IDebugServer>();
 
                                 var debugServerTask = debugServer.WaitForConnection(step.ExecutionContext, null);
-                                var delayTask = Task.Delay(TimeSpan.FromSeconds(120));
+                                var delayTask = Task.Delay(TimeSpan.FromSeconds(120), cts.Token);
                                 var r = await Task.WhenAny(debugServerTask, delayTask);
+
+                                cts.Cancel();
 
                                 if (r == delayTask || !(r as Task<bool>).Result)
                                 {
